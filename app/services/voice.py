@@ -42,7 +42,8 @@ _MIMO_DEFAULT_TTS_MODEL = "mimo-v2.5-tts"
 MINIMAX_TTS_GLOBAL_URL = "https://api.minimax.io/v1/t2a_v2"
 MINIMAX_TTS_CN_URL = "https://api.minimaxi.com/v1/t2a_v2"
 MINIMAX_TTS_DEFAULT_MODEL = "speech-2.8-hd"
-MINIMAX_TTS_DEFAULT_VOICE = "English_expressive_narrator"
+MINIMAX_TTS_DEFAULT_VOICE = "369377588244680"
+# MINIMAX_TTS_DEFAULT_VOICE = "English_expressive_narrator"
 MINIMAX_TTS_MODELS = (
     "speech-2.8-hd", "speech-2.8-turbo", "speech-2.6-hd", "speech-2.6-turbo",
     "speech-02-hd", "speech-02-turbo", "speech-01-hd", "speech-01-turbo",
@@ -1919,14 +1920,14 @@ def gemini_tts(
 ) -> Union[SubMaker, None]:
     """
     使用Google Gemini TTS生成语音
-    
+
     Args:
         text: 要转换的文本
         voice_name: 语音名称，如 "Zephyr", "Puck" 等
         voice_rate: 语音速率（当前未使用）
         voice_file: 输出音频文件路径
         voice_volume: 音频音量（当前未使用）
-        
+
     Returns:
         SubMaker对象或None
     """
@@ -1936,7 +1937,7 @@ def gemini_tts(
     from google import genai
     from google.genai import types
     _configure_pydub_ffmpeg(AudioSegment)
-    
+
     temporary_audio = None
     try:
         api_key = config.app.get("gemini_api_key", "")
@@ -1976,7 +1977,7 @@ def gemini_tts(
             if hasattr(part, 'inline_data') and part.inline_data:
                 audio_data = part.inline_data.data
                 break
-                
+
         if not audio_data:
             feedback = getattr(response, "prompt_feedback", None)
             logger.error(
@@ -1986,7 +1987,7 @@ def gemini_tts(
                 getattr(feedback, "block_reason", None),
             )
             return None
-            
+
         # 音频数据已经是原始字节，不需要base64解码
         if isinstance(audio_data, str):
             # 如果是字符串，则需要base64解码
@@ -1994,14 +1995,14 @@ def gemini_tts(
         else:
             # 如果已经是字节，直接使用
             audio_bytes = audio_data
-        
+
         # 尝试不同的音频格式 - Gemini可能返回不同的格式
         audio_segment = None
-        
+
         # Gemini返回Linear PCM格式，按照文档参数解析
         try:
             audio_segment = AudioSegment.from_file(
-                io.BytesIO(audio_bytes), 
+                io.BytesIO(audio_bytes),
                 format="raw",
                 frame_rate=24000,  # Gemini TTS默认采样率
                 channels=1,        # 单声道
@@ -2010,7 +2011,7 @@ def gemini_tts(
         except Exception as e:
             logger.error(f"Failed to load PCM audio: {e}")
             return None
-        
+
         # API、CLI 或测试可以直接把尚不存在的嵌套目录作为输出位置。这里在
         # 真正写文件前统一创建父目录，避免一次成功的 Gemini 请求最后因为
         # 本地路径不存在而丢失结果，也让该 provider 与其他 TTS 实现行为一致。
@@ -2027,7 +2028,7 @@ def gemini_tts(
         os.close(temp_fd)
         exported_audio = audio_segment.export(temporary_audio, format="mp3")
         exported_audio.close()
-        
+
         # Gemini 拿不到 edge_tts 那种逐词边界事件，因此这里退回到
         # 项目原有的 `subs/offset` 兼容结构，至少保证后续字幕与时长
         # 计算链路可继续工作。
@@ -2041,7 +2042,7 @@ def gemini_tts(
         os.replace(temporary_audio, voice_file)
         logger.info(f"completed, output file: {voice_file}")
         return sub_maker
-        
+
     except ImportError as e:
         logger.error(f"Missing required package for Gemini TTS: {str(e)}. Please install: pip install pydub")
         return None
@@ -2381,6 +2382,11 @@ def _write_validated_minimax_audio(audio_bytes: bytes, voice_file: str) -> float
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+def _get_minimax_language_boost():
+    video_language = config.ui.get("video_language").lower() or "auto"
+    if "yue" in video_language or "hk" in video_language:
+        return "Cantonese"
+    return video_language
 
 def minimax_tts(text: str, voice_id: str, voice_rate: float, voice_file: str, voice_volume: float = 1.0) -> Union[SubMaker, None]:
     """Generate speech with the synchronous MiniMax T2A HTTP API."""
@@ -2412,8 +2418,9 @@ def minimax_tts(text: str, voice_id: str, voice_rate: float, voice_file: str, vo
     if audio_format not in {"mp3", "wav", "flac"}:
         logger.error(f"Unsupported MiniMax TTS audio format: {audio_format}; choose mp3, wav, or flac")
         return None
+    video_language = _get_minimax_language_boost()
     payload = {
-        "model": model, "text": text, "stream": False, "language_boost": "auto", "output_format": "hex",
+        "model": model, "text": text, "stream": False, "language_boost": video_language, "output_format": "hex",
         "voice_setting": {"voice_id": voice_id, "speed": speed, "vol": volume, "pitch": pitch},
         "audio_setting": {"sample_rate": sample_rate, "bitrate": bitrate, "format": audio_format, "channel": channel},
     }

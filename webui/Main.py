@@ -1885,6 +1885,7 @@ support_locales = [
     "vi-VN",
     "th-TH",
     "tr-TR",
+    "Cantonese"
 ]
 
 
