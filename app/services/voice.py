@@ -2428,7 +2428,7 @@ def minimax_tts(text: str, voice_id: str, voice_rate: float, voice_file: str, vo
     for attempt in range(3):
         received_success = False
         try:
-            logger.info(f"start MiniMax TTS, model: {model}, voice: {voice_id}, try: {attempt + 1}")
+            logger.info(f"start MiniMax TTS, model: {model}, voice: {voice_id}, language_boost: {video_language}, try: {attempt + 1}")
             response = trace_http_call(
                 "POST", requests.post, url, json=payload, headers=headers, allow_redirects=False, timeout=120)
             if 300 <= response.status_code < 400:
