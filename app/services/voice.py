@@ -2385,7 +2385,7 @@ def _write_validated_minimax_audio(audio_bytes: bytes, voice_file: str) -> float
 def _get_minimax_language_boost():
     video_language = config.ui.get("video_language").lower() or "auto"
     if "yue" in video_language or "hk" in video_language:
-        return "Cantonese"
+        return "Cantonese,Yue"
     return video_language
 
 def minimax_tts(text: str, voice_id: str, voice_rate: float, voice_file: str, voice_volume: float = 1.0) -> Union[SubMaker, None]:
