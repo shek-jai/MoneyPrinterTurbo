@@ -2449,6 +2449,7 @@ def minimax_tts(text: str, voice_id: str, voice_rate: float, voice_file: str, vo
                 return None
             if status_code != 0:
                 logger.error(f"MiniMax TTS returned an unsuccessful response: status_code={base_resp.get('status_code')}, audio_status={data.get('status')}")
+                logger.error(f"MiniMax TTS Error: full_body={body}");
                 continue
             if data.get("status") != 2:
                 logger.error("MiniMax accepted the request but returned incomplete audio")
